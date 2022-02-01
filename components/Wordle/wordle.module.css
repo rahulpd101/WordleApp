@@ -1,0 +1,19 @@
+.wordle {
+	font-family: "Lucida Sans", "Lucida Sans Regular";
+	font-size: 60px;
+	color: blue;
+}
+
+.word {
+	display: flex;
+	justify-content: center;
+}
+
+.char {
+	border: 3px solid black;
+	display: flex;
+	height: 60px;
+	width: 40px;
+	justify-content: center;
+	align-items: center;
+}
