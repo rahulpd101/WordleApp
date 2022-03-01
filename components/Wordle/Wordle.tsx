@@ -3,18 +3,25 @@ import styles from "./wordle.module.css";
 
 const totalGuessMax = 6;
 
-type WordleProps = {
-	puzzleWord: string;
-};
+function useWordOfTheDay() {
+	const [word, setWord] = useState<null | string>(null);
+	useEffect(() => {
+		async function fetchWord() {
+			const response = await fetch("/api/word").then((res) => res.json());
+			console.log(response);
+			setWord(response.word);
+		}
+		fetchWord();
+	}, []);
+	return word;
+}
 
-export default function Wordle({ puzzleWord }: WordleProps) {
-	if (puzzleWord.length !== 5) {
-		throw new Error(`Puzzle word must be 5 characters long. ${puzzleWord} is not a valid choice.`);
-	}
-
+export default function Wordle() {
 	const [submittedGuesses, setSubmittedGuesses] = useState<Array<string[]>>([]);
 	const [guess, setGuess] = useState<string[]>([]);
 
+	const wordOfTheDay = useWordOfTheDay();
+	// console.log({ wordOfTheDay });
 	useEffect(() => {
 		function handleKeyDown({ key }: { key: string }) {
 			// console.log(key);
@@ -47,14 +54,11 @@ export default function Wordle({ puzzleWord }: WordleProps) {
 
 	console.log(submittedGuesses);
 
-	const isCorrect =
-		submittedGuesses.length > 0 && submittedGuesses[submittedGuesses.length - 1].join("") === puzzleWord;
-
-	const isFailure = !isCorrect && submittedGuesses.length === totalGuessMax;
-	// favourite function yet written by me(sort of!).
-	// got an error "type 'void' is not assignable to type 'Record<string,number>'" when the code wasn't returning the useMemo hook.
 	const puzzleWordCharCount = useMemo(() => {
-		return puzzleWord.split("").reduce<Record<string, number>>((acc, char) => {
+		if (wordOfTheDay === null) {
+			return {};
+		}
+		return wordOfTheDay.split("").reduce<Record<string, number>>((acc, char) => {
 			if (!acc.hasOwnProperty(char)) {
 				acc[char] = 1;
 			} else {
@@ -62,23 +66,36 @@ export default function Wordle({ puzzleWord }: WordleProps) {
 			}
 			return acc;
 		}, {});
-	}, [puzzleWord]);
+	}, [wordOfTheDay]);
+
+	if (wordOfTheDay === null) {
+		return <p>Loading...</p>;
+	}
+
+	const isCorrect =
+		submittedGuesses.length > 0 && submittedGuesses[submittedGuesses.length - 1].join("") === wordOfTheDay;
+
+	const isFailure = !isCorrect && submittedGuesses.length === totalGuessMax;
+	// favourite function yet written by me(sort of!).
+	// got an error "type 'void' is not assignable to type 'Record<string,number>'" when the code wasn't returning the useMemo hook.
 
 	return (
 		<div className={styles.wordle}>
-			<SubmittedGuesses
-				puzzleWord={puzzleWord}
-				submittedGuesses={submittedGuesses}
-				puzzleWordCharCount={puzzleWordCharCount}
-			/>
+			<div className={styles.wordleBoard}>
+				<SubmittedGuesses
+					puzzleWord={wordOfTheDay}
+					submittedGuesses={submittedGuesses}
+					puzzleWordCharCount={puzzleWordCharCount}
+				/>
 
-			{!isCorrect && <CurrentGuess guess={guess} />}
+				{!isFailure && !isCorrect && <CurrentGuess guess={guess} />}
 
-			{Array.from({ length: totalGuessMax - submittedGuesses.length - (isCorrect ? 0 : 1) }).map((_, i) => {
-				return <EmptyGuess key={i} />;
-			})}
-			{isCorrect && <div className={`${styles.message}`}>You did it! You are the smartest.</div>}
-			{isFailure && <div className={`${styles.message}`}>Sorry, try again next time.</div>}
+				{Array.from({ length: totalGuessMax - submittedGuesses.length - (isCorrect ? 0 : 1) }).map((_, i) => {
+					return <EmptyGuess key={i} />;
+				})}
+				{isCorrect && <div className={`${styles.message}`}>You did it! You are the smartest.</div>}
+				{isFailure && <div className={`${styles.message}`}>Sorry, try again next time.</div>}
+			</div>
 		</div>
 	);
 }
@@ -137,12 +154,12 @@ function SubmittedGuess({
 					isPresent = true;
 					charMap[guessChar] -= 1;
 				}
-				// const isPresent = !isCorrect && !!puzzleWordCharCount[guessChar];
+
 				return (
 					<span
-						className={`${styles.char} ${isCorrect ? styles.correctChar : ""}${
+						className={`${styles.char} ${isCorrect ? styles.correctChar : ""} ${
 							isPresent ? styles.presentChar : ""
-						}`}
+						} ${styles.guessedChar}`}
 						key={i}>
 						{guessChar}
 					</span>
